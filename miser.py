@@ -68,12 +68,13 @@ class _MiserBarVisualizer(object):
         outstrs = ["\n"]
         propDict = {}
         total = sum(vals)
-        maxLen = max([len(a) for a in keys])
+        maxLenKey = max([len(a) for a in keys])
+        maxLenVal = max([len(repr(a)) for a in vals]) 
 
         for k, v in indict:
             outstr = " "
-            outstr += k.ljust(maxLen + 1)
-            outstr += str(v).ljust(len(repr(v)) + 1)
+            outstr += k.ljust(maxLenKey + 1)
+            outstr += str(v).ljust(maxLenVal + 1)
             outstr += "-" * int(self.numBars * (v / total))
             outstrs.append(outstr)
 
