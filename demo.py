@@ -1,25 +1,28 @@
 from miser import *
-import datetime as dt
 
 m = Miser("jobeirne")
 
 g = Goal(amount = 16e3, # $16,000
-         by = dt.date(2012, 8, 1)) # by Aug. 1, 2012
+         by = Date(2012, 8, 1)) # by Aug. 1, 2012
 
-m.attachGoal(g)
+m.addGoal(g)
 
-bills = [Expense(name = "MATH315 tuition",
-                 amount = 1.3e3,
-                 on = dt.date(2011, 8, 29)),
+m.addTransactions(
 
-         Expense(name = "netflix",
-                 amount = 14.,
-                 on = MonthlyRecurring(15))] # 15th day of the month
+    # Expenses
+    Expense(name = "MATH315 tuition",
+            amount = 1.3e3,
+            on = Date(2011, 8, 29)),
 
-income = [Income(name = "phase2",
-                 amount = 1.5e3,
-                 on = [MonthlyRecurring(7, 22)])]
+    Expense(name = "netflix",
+            amount = 14.,
+            on = MonthlyRecurring(15)), # 15th day of the month
 
-m.attachExpenses(bills)
-m.attachIncome(income)
+    # Income
+    Income(name = "phase2",
+           amount = 1.5e3,
+           on = MonthlyRecurring(7, 22)),
+)
 
+print(m.summary(fromdt=Date(2011, 8, 20), 
+                todt=Date(2012, 8, 24)))
