@@ -32,8 +32,8 @@ class Miser(object):
         return sum(self._buildTotalsDict(fromdt, todt).values())
 
     def summary(self, fromdt, todt):
-        sumStr = "%s to %s:\n" % (fromdt, todt)
-        sumStr += "Total: %.2f" % self._totalForPeriod(fromdt, todt)
+        sumStr = "%s to %s\n" % (fromdt, todt)
+        sumStr += "Total saved: %.2f" % self._totalForPeriod(fromdt, todt)
 
         totalsDict = self._buildTotalsDict(fromdt, todt)
         sortedTotsList = dictToSortedList(totalsDict)
@@ -43,6 +43,7 @@ class Miser(object):
 
         mBar = _MiserBarVisualizer(incomeDict, expensesDict)
 
+        sumStr += "\n\nProfile of expenses:"
         sumStr += mBar.expensesBar
 
         return sumStr
