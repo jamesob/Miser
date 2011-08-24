@@ -58,17 +58,17 @@ print(m.summary(fromdt=Date(2011, 8, 20),
 
 which produces
 
-sample: 2011-08-20 00:00:00 to 2012-09-01 00:00:00
-Total saved: 29116.00
+    sample: 2011-08-20 00:00:00 to 2012-09-01 00:00:00
+    Total saved: 29116.00
 
-Goals:
-Goal 'enough to buy some serious dj equipment' met with 23116.00 to spare!
+    Goals:
+    Goal 'enough to buy some serious dj equipment' met with 23116.00 to spare!
 
-Profile of expenses:
+    Profile of expenses:
 
- debt            -4000.0 ----------------------------------------------------------
- MATH315 tuition -1300.0 ------------------
- lunch           -960.0  -------------
- weekly beer     -540.0  -------
- netflix         -84.0   -
+     debt            -4000.0 ----------------------------------------------------------
+     MATH315 tuition -1300.0 ------------------
+     lunch           -960.0  -------------
+     weekly beer     -540.0  -------
+     netflix         -84.0   -
 
