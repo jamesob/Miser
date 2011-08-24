@@ -2,7 +2,8 @@ from miser import *
 
 m = Miser("jobeirne")
 
-g = Goal(amount = 16e3, # $16,000
+g = Goal(name = "bankity bank bank",
+         amount = 16e3, # $16,000
          by = Date(2012, 8, 1)) # by Aug. 1, 2012
 
 m.addGoal(g)
@@ -28,7 +29,13 @@ m.addTransactions(
                               
     Expense(name = "lunch",
             amount = 6.,
-            on = WeeklyRecurring(MO, TU, TH)),
+            on = WeeklyRecurring((MO, TU, TH))),
+
+    Expense(name = "dc metro to schoo",
+            amount = 5.,
+            on = WeeklyRecurring((MO, WE, SA),
+                                 fromdt = Date(2011, 8, 29),
+                                 todt = Date(2012, 1, 1))),
                                
     Expense(name = "groceries",
             amount = 25.,
@@ -52,8 +59,8 @@ m.addTransactions(
                                     
     # Income
     Income(name = "phase2",
-           amount = 1.5e3,
-           on = MonthlyRecurring(7, 22)),
+           amount = 1.748e3,
+           on = MonthlyRecurring((7, 22))),
 )
 
 print(m.summary(fromdt=Date(2011, 8, 20), 
