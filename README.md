@@ -16,7 +16,8 @@ from miser import *
 m = Miser("sample")
 
 # set a goal
-g = Goal(amount = 16e3, # $16,000
+g = Goal("enough to buy some serious dj equipment",
+         amount = 6e3, # $6,000
          by = Date(2012, 8, 1)) # by Aug. 1, 2012
 
 m.addGoal(g)
@@ -57,15 +58,17 @@ print(m.summary(fromdt=Date(2011, 8, 20),
 
 which produces
 
+sample: 2011-08-20 00:00:00 to 2012-09-01 00:00:00
+Total saved: 29116.00
 
-    2011-08-20 00:00:00 to 2012-09-01 00:00:00
-    Total saved: 30604.00
+Goals:
+Goal 'enough to buy some serious dj equipment' met with 23116.00 to spare!
 
-    Profile of expenses:
+Profile of expenses:
 
-     debt            -4000.0 ----------------------------------------------------------
-     MATH315 tuition -1300.0 ------------------
-     lunch           -972.0  --------------
-     weekly beer     -540.0  -------
-     netflix         -84.0   -
+ debt            -4000.0 ----------------------------------------------------------
+ MATH315 tuition -1300.0 ------------------
+ lunch           -960.0  -------------
+ weekly beer     -540.0  -------
+ netflix         -84.0   -
 
