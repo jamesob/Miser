@@ -38,7 +38,7 @@ m.addTransactions(
                                   
     Expense(name = "lunch",
             amount = 6.,
-            on = WeeklyRecurring(MO, TU, TH)),
+            on = WeeklyRecurring((MO, TU, TH))),
                                    
     Expense(name = "debt",
             amount = 4e3,
@@ -47,7 +47,7 @@ m.addTransactions(
     # Income
     Income(name = "job",
            amount = 1.5e3,
-           on = MonthlyRecurring(7, 22)),
+           on = MonthlyRecurring((7, 22))),
 )
 
 # Print a simulation of the year
