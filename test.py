@@ -2,6 +2,7 @@
 
 import unittest
 from miser import *
+from miser.scheduling import *
 
 class Tests(unittest.TestCase):
 
@@ -17,7 +18,7 @@ class Tests(unittest.TestCase):
                                         todt = self.todt))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m._totalForPeriod(self.fromdt, self.todt), 
+        self.assertEqual(self.m.totalSaved(self.fromdt, self.todt), 
                          -365.)
 
     def test_weekly(self):
@@ -28,7 +29,7 @@ class Tests(unittest.TestCase):
                                          todt = self.todt))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m._totalForPeriod(self.fromdt, self.todt), 
+        self.assertEqual(self.m.totalSaved(self.fromdt, self.todt), 
                          100. * -52.)
 
     def test_monthly(self):
@@ -39,7 +40,7 @@ class Tests(unittest.TestCase):
                                           todt = self.todt))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m._totalForPeriod(self.fromdt, self.todt), 
+        self.assertEqual(self.m.totalSaved(self.fromdt, self.todt), 
                          12 * -1000.)
                                      
     def test_overlap(self):
@@ -54,7 +55,7 @@ class Tests(unittest.TestCase):
                                          todt = self.todt)))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m._totalForPeriod(self.fromdt, self.todt), 
+        self.assertEqual(self.m.totalSaved(self.fromdt, self.todt), 
                          -365.)
                                      
 if __name__ == '__main__':
