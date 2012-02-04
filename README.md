@@ -2,8 +2,8 @@
 
 Miser is a Python library that can be used for writing scripts that'll help you
 project costs and figure out how to accumulate money. It is in super-secret
-alpha stealth mode, so it's not packaged properly, lacks tests, and is not
-extraordinarily user-friendly. Yet.
+alpha stealth mode, so it's not packaged properly, lacks tests, and is unstable.
+For now.
 
 ## Example
 
@@ -11,12 +11,13 @@ Here's a simple usage:
 
 ```python
 from miser import *
+from miser.scheduling import *
 
 # instantiate a Miser instance
 m = Miser("sample")
 
 # set a goal
-g = Goal("enough to buy some serious dj equipment",
+g = Goal("enough to buy some dj equipment",
          amount = 6e3, # $6,000
          by = Date(2012, 8, 1)) # by Aug. 1, 2012
 
@@ -52,8 +53,13 @@ m.addTransactions(
 )
 
 # Print a simulation of the year
-print(m.summary(fromdt=Date(2011, 8, 20), 
-                todt=Date(2012, 9, 1)))                   
+def summary(fromdt, todt):
+  args = (m, fromdt, todt)
+  GoalPrinter(*args)
+  Histogram(*args)
+
+if __name__ == '__main__':
+  summary(Date(2011, 8, 20), Date(2012, 9, 1))
 ```
 
 which produces
