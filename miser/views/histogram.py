@@ -43,7 +43,7 @@ class Histogram(object):
     for k, v in indict:
       outstr = " "
       outstr += k.ljust(maxLenKey + 1)
-      outstr += str(v).ljust(maxLenVal + 1)
+      outstr += ("%.2f" % v).ljust(maxLenVal + 1)
       outstr += "-" * int(self.numBars * (v / total))
       outstrs.append(outstr)
 
