@@ -12,69 +12,100 @@ Here's a simple usage:
 ```python
 from miser import *
 from miser.scheduling import *
+from miser.views import *
+import random
 
-# instantiate a Miser instance
-m = Miser("sample")
+m = Miser("test", 
+          initialBalance = 3e3)
 
-# set a goal
-g = Goal("enough to buy some dj equipment",
-         amount = 6e3, # $6,000
-         by = Date(2012, 8, 1)) # by Aug. 1, 2012
+g = Goal(name = "bankity bank bank",
+         amount = 20e3, # $16,000
+         by = Date(2012, 9, 1)) # by Aug. 1, 2012
 
 m.addGoal(g)
 
 m.addTransactions(
-
     # Expenses
-    Expense(name = "MATH315 tuition",
+    Expense(name = "MATH322 tuition",
             amount = 1.3e3,
-            on = Date(2011, 8, 29)), # non-recurring
-                        
+            on = Date(2012, 5, 29)),
+                           
     Expense(name = "netflix",
             amount = 7.,
             on = MonthlyRecurring(15)), # 15th day of the month
-                                 
-    Expense(name = "weekly beer",
-            amount = 10.,
-            on = WeeklyRecurring(FR)), # every week on Friday
-                                  
+                            
     Expense(name = "lunch",
             amount = 6.,
-            on = WeeklyRecurring((MO, TU, TH))),
-                                   
-    Expense(name = "debt",
-            amount = 4e3,
-            on = Date(2011, 8, 29)),
-                                  
+            on = DailyRecurring()),
+                             
+    Expense(name = "dinner",
+            amount = 5.,
+            on = WeeklyRecurring((SA, SU, TU, WE, FR))),
+                              
+    Expense(name = "breakfast",
+            amount = 3.,
+            on = DailyRecurring()),
+                              
+    Expense(name = "rent+utils",
+            amount = 800.,
+            on = MonthlyRecurring(29)),
+                                 
     # Income
-    Income(name = "job",
-           amount = 1.5e3,
+    Income(name = "phase2",
+           amount = 2.066e3,
            on = MonthlyRecurring((7, 22))),
 )
 
-# Print a simulation of the year
+def unforeseen():
+  """Return a random value in some range to simulate unforeseen expenses."""
+  return random.gauss(300., 100.)
+
+m.addTransaction(
+    Expense(name = "unforeseen",
+            amount = unforeseen,
+            on = MonthlyRecurring(1))
+)
+
+def investment(principal, interest):
+  """A generator that simulates an investment and interest on it, compounded
+  monthly."""
+  while True:
+    principal *= (1 + interest)
+    yield principal
+
+m.addTransaction(
+    Income(name = "Investment",
+           amount = investment(1000, 0.07),
+           on = MonthlyRecurring(1))
+)
+
 def summary(fromdt, todt):
   args = (m, fromdt, todt)
   GoalPrinter(*args)
   Histogram(*args)
 
 if __name__ == '__main__':
-  summary(Date(2011, 8, 20), Date(2012, 9, 1))
+  summary(Date(2012, 2, 1), Date(2012, 8, 15))
 ```
 
 which produces
 
-    sample: 2011-08-20 00:00:00 to 2012-09-01 00:00:00
-    Total saved: 29116.00
+```
+test: 2012-02-01 00:00:00 to 2012-08-15 00:00:00
+Total saved: 28455.56
 
-    Goals:
-    Goal 'enough to buy some serious dj equipment' met with 23116.00 to spare!
+Goals:
+Goal 'bankity bank bank' met with 13900.71 to spare!
 
-    Profile of expenses:
 
-     debt            -4000.0 ----------------------------------------------------------
-     MATH315 tuition -1300.0 ------------------
-     lunch           -960.0  -------------
-     weekly beer     -540.0  -------
-     netflix         -84.0   -
+Profile of expenses:
+
+ rent+utils      -4800.00           ---------------------------------------------
+ unforeseen      -1868.69           -----------------
+ MATH322 tuition -1300.00           ------------
+ lunch           -1182.00           -----------
+ dinner          -705.00            ------
+ breakfast       -591.00            -----
+ netflix         -49.00
+```
 

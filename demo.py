@@ -1,67 +1,78 @@
 from miser import *
+from miser.scheduling import *
+from miser.views import *
+import random
 
-m = Miser("jobeirne")
+m = Miser("test", 
+          initialBalance = 3e3)
 
 g = Goal(name = "bankity bank bank",
-         amount = 16e3, # $16,000
-         by = Date(2012, 8, 1)) # by Aug. 1, 2012
+         amount = 20e3, # $16,000
+         by = Date(2012, 9, 1)) # by Aug. 1, 2012
 
 m.addGoal(g)
 
 m.addTransactions(
-
     # Expenses
-    Expense(name = "MATH315 tuition",
-            amount = 1.3e3,
-            on = Date(2011, 8, 29)),
-
     Expense(name = "MATH322 tuition",
             amount = 1.3e3,
-            on = Date(2012, 1, 29)),
-                            
-    Expense(name = "PHYS tuition",
-            amount = 1.3e3,
             on = Date(2012, 5, 29)),
-                             
+                           
     Expense(name = "netflix",
             amount = 7.,
             on = MonthlyRecurring(15)), # 15th day of the month
-                              
+                            
     Expense(name = "lunch",
             amount = 6.,
-            on = WeeklyRecurring((MO, TU, TH))),
-
-    Expense(name = "dc metro to schoo",
+            on = DailyRecurring()),
+                             
+    Expense(name = "dinner",
             amount = 5.,
-            on = WeeklyRecurring((MO, WE, SA),
-                                 fromdt = Date(2011, 8, 29),
-                                 todt = Date(2012, 1, 1))),
-                               
-    Expense(name = "groceries",
-            amount = 25.,
-            on = WeeklyRecurring(SA)),
-                               
+            on = WeeklyRecurring((SA, SU, TU, WE, FR))),
+                              
+    Expense(name = "breakfast",
+            amount = 3.,
+            on = DailyRecurring()),
+                              
     Expense(name = "rent+utils",
-            amount = 700.,
+            amount = 800.,
             on = MonthlyRecurring(29)),
-                                
-    Expense(name = "gas",
-            amount = 40.,
-            on = MonthlyRecurring(29)),
-                                    
-    Expense(name = "debt",
-            amount = 4e3,
-            on = Date(2011, 8, 29)),
-                                
-    Expense(name = "weekly beer",
-            amount = 10.,
-            on = WeeklyRecurring(FR)),
-                                    
+                                 
     # Income
     Income(name = "phase2",
-           amount = 1.748e3,
+           amount = 2.066e3,
            on = MonthlyRecurring((7, 22))),
 )
 
-print(m.summary(fromdt=Date(2011, 8, 20), 
-                todt=Date(2012, 9, 1)))
+def unforeseen():
+  """Return a random value in some range to simulate unforeseen expenses."""
+  return random.gauss(300., 100.)
+
+m.addTransaction(
+    Expense(name = "unforeseen",
+            amount = unforeseen,
+            on = MonthlyRecurring(1))
+)
+
+def investment(principal, interest):
+  """A generator that simulates an investment and interest on it, compounded
+  monthly."""
+  while True:
+    principal *= (1 + interest)
+    yield principal
+
+m.addTransaction(
+    Income(name = "Investment",
+           amount = investment(1000, 0.07),
+           on = MonthlyRecurring(1))
+)
+
+def summary(fromdt, todt):
+  args = (m, fromdt, todt)
+  GoalPrinter(*args)
+  Histogram(*args)
+
+if __name__ == '__main__':
+  summary(Date(2012, 2, 1), Date(2012, 8, 15))
+
+
