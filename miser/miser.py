@@ -76,6 +76,13 @@ class Transaction(object):
 
 
   def __init__(self, name, amount, on, category=None):
+    """
+    :Parameters:
+      - `name`
+      - `amount`: Can be a scalar amount, the result of a generator, or a
+        callable.
+      - `on`: a `Datetime` or a `dateutil.rrule`
+    """
     self.name = name
     self.category = category
     self.dateRules = rruleset()
@@ -95,27 +102,35 @@ class Transaction(object):
         self.dateRules.rdate(dateOrRule)
       else:
         import sys
-        print("Couldn't add date rules for transaction '%s'!",
-              file = sys.stderr)
+        print("Couldn't add date rules for transaction '%s'!", file=sys.stderr)
 
   @property
   def amount(self):
-    return self._amount
+    if isinstance(self._amount, collections.Iterator):
+      return self._amount.next()
+    elif callable(self._amount):
+      return self._amount()
+    else:
+      return self._amount
 
   def effectForPeriod(self, fromdt, todt):
     """Calculate the effect of a transaction over a period of
     time specified by `fromdt` to `todt`."""
-    oneday = datetime.timedelta(1)
-    # have to compensate for rrule.between being exclusive
-    return len(self.dateRules.between(fromdt - oneday, todt + oneday)) \
-        * self.amount
+    hits = self.dateRules.between(fromdt, todt, inc=True)
+
+    # we must iterate in case self.amount is a generator
+    amt = 0
+    for i in range(len(hits)):
+      amt += self.amount
+
+    return amt
 
 class Expense(Transaction):
 
 
   @property
   def amount(self):
-    return -1. * self._amount
+    return -1. * super(Expense, self).amount
 
 
 class Income(Transaction):
@@ -134,10 +149,6 @@ class Goal(object):
 Utility functions
 -----------------
 """
-
-def Date(year, month, day):
-  """Simple wrapper to turn dates into `datetime`s."""
-  return datetime.datetime(year, month, day, 0, 0)
 
 def dictToSortedList(inDict):
   return sorted(inDict.iteritems(), key=operator.itemgetter(1))

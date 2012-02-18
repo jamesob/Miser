@@ -18,6 +18,7 @@ __copyright__ = "Copyright 2012 James O'Beirne"
 
 
 import scheduling
+from scheduling import Date
 import views
 from .miser import *
 
