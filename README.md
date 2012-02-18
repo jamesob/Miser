@@ -51,8 +51,8 @@ m.addTransactions(
             on = MonthlyRecurring(29)),
                                  
     # Income
-    Income(name = "phase2",
-           amount = 2.066e3,
+    Income(name = "job",
+           amount = 2e3,
            on = MonthlyRecurring((7, 22))),
 )
 
