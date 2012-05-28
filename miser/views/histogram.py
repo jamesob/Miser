@@ -11,6 +11,7 @@ class Histogram(object):
 
   def __init__(self, miser, fromdt, todt, numBars = 100):
     """Print a histogram of expenses."""
+
     def keysToString(indict):
       """Return a new dict that has converted `indict`'s keys from
       Transaction to string."""
@@ -22,9 +23,13 @@ class Histogram(object):
     self.income = dictToSortedList(keysToString(miser.income(fromdt, todt)))
     self.expenses = dictToSortedList(keysToString(miser.expenses(fromdt, todt)))
     self.numBars = numBars
-    
+
+    print "Total expenses: %f" % (sum(miser.expenses(fromdt, todt).values()))
+
     sumStr = "\nProfile of expenses:"
     sumStr += self.expensesBar
+    sumStr += "\n\nProfile of income:"
+    sumStr += self.incomeBar
 
     print sumStr
 
@@ -38,7 +43,7 @@ class Histogram(object):
     propDict = {}
     total = sum(vals)
     maxLenKey = max([len(a) for a in keys])
-    maxLenVal = max([len(repr(a)) for a in vals]) 
+    maxLenVal = max([len(repr(a)) for a in vals])
 
     for k, v in indict:
       outstr = " "
