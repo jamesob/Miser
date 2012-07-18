@@ -1,9 +1,7 @@
 ## Get rich: be Miserly
 
 Miser is a Python library that can be used for writing scripts that'll help you
-project costs and figure out how to accumulate money. It is in super-secret
-alpha stealth mode, so it's not packaged properly, lacks tests, and is unstable.
-For now.
+project costs and figure out how to accumulate money. It's in unstable alpha.
 
 ## Example
 
