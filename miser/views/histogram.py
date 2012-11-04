@@ -9,7 +9,7 @@ class Histogram(object):
   """
 
 
-  def __init__(self, miser, fromdt, todt, numBars = 100):
+  def __init__(self, miser, fromdt, todt, numBars = 60):
     """Print a histogram of expenses."""
 
     def keysToString(indict):

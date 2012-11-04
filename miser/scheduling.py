@@ -1,19 +1,28 @@
 #!/usr/bin/python
 
-from dateutil.rrule import *
+from dateutil import rrule
 import datetime
 
+import logging
+log = logging.getLogger(__name__)
 
-def Date(year, month, day):
-    """Simple wrapper to turn dates into `datetime`s."""
-    return datetime.datetime(year, month, day, 0, 0)
+
+class Weekdays(object):
+    """Constants indicating weekdays."""
+    MO = rrule.MO
+    TU = rrule.TU
+    WE = rrule.WE
+    TH = rrule.TH
+    FR = rrule.FR
+    SA = rrule.SA
+    SU = rrule.SU
 
 
 class _Recurring(object):
     """Decide how often a `Transaction` occurs. `Transaction` has these."""
 
     # hack that allows miser to behave properly for past date ranges
-    way_old_date=Date(2005, 1, 1)
+    way_old_date = datetime.date(2011, 1, 1)
 
     def __init__(self, frequency, **kwargs):
         """
@@ -23,38 +32,41 @@ class _Recurring(object):
             * `kwargs`: are valid arguments for `dateutil.rrule`s.
         """
         kwargs['dtstart'] = kwargs['dtstart'] or self.way_old_date
-        self.rule = rrule(frequency, **kwargs)
+        self.rule = rrule.rrule(frequency, **kwargs)
 
 
 class YearlyRecurring(_Recurring):
 
-    def __init__(self, month, day, fromdt=None, todt=None):
-        super(YearlyRecurring, self).__init__(YEARLY,
+    def __init__(self, month, day, begin=None, end=None):
+        super(YearlyRecurring, self).__init__(rrule.YEARLY,
                                               bymonth=month,
                                               bymonthday=day,
-                                              dtstart=fromdt,
-                                              until=todt)
+                                              dtstart=begin,
+                                              until=end)
 
 
 class MonthlyRecurring(_Recurring):
 
-    def __init__(self, days, fromdt=None, todt=None):
-        super(MonthlyRecurring, self).__init__(MONTHLY, bymonthday=days,
-                                               dtstart=fromdt,
-                                               until=todt)
+    def __init__(self, *days, **kwargs):
+        super(MonthlyRecurring, self).__init__(rrule.MONTHLY,
+                                               bymonthday=days,
+                                               dtstart=kwargs.get('begin'),
+                                               until=kwargs.get('end'))
 
 
 class WeeklyRecurring(_Recurring):
 
-    def __init__(self, days, fromdt=None, todt=None):
-        super(WeeklyRecurring, self).__init__(WEEKLY, byweekday=days,
-                                              dtstart=fromdt,
-                                              until=todt)
+    def __init__(self, *days, **kwargs):
+        super(WeeklyRecurring, self).__init__(rrule.WEEKLY,
+                                              byweekday=days,
+                                              dtstart=kwargs.get('begin'),
+                                              until=kwargs.get('end'))
 
 
 class DailyRecurring(_Recurring):
 
-    def __init__(self, fromdt=None, todt=None):
-        super(DailyRecurring, self).__init__(DAILY,
-                                             dtstart=fromdt,
-                                             until=todt)
+    def __init__(self, begin=None, end=None):
+        super(DailyRecurring, self).__init__(rrule.DAILY,
+                                             dtstart=begin,
+                                             until=end)
+

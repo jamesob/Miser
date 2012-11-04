@@ -1,2 +1,3 @@
-from goalprinter import GoalPrinter
+from goalprinter import GoalPrinter, RetirementPrinter
 from histogram import Histogram
+

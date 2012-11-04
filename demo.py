@@ -3,12 +3,12 @@ from miser.scheduling import *
 from miser.views import *
 import random
 
-m = Miser("test", 
+m = Miser("test",
           initialBalance = 3e3)
 
 g = Goal(name = "bankity bank bank",
          amount = 20e3, # $16,000
-         by = Date(2012, 9, 1)) # by Aug. 1, 2012
+         by = datetime.date(2012, 9, 1)) # by Aug. 1, 2012
 
 m.addGoal(g)
 
@@ -16,28 +16,28 @@ m.addTransactions(
     # Expenses
     Expense(name = "MATH322 tuition",
             amount = 1.3e3,
-            on = Date(2012, 5, 29)),
-                           
+            on = datetime.date(2012, 5, 29)),
+
     Expense(name = "netflix",
             amount = 7.,
             on = MonthlyRecurring(15)), # 15th day of the month
-                            
+
     Expense(name = "lunch",
             amount = 6.,
             on = DailyRecurring()),
-                             
+
     Expense(name = "dinner",
             amount = 5.,
             on = WeeklyRecurring((SA, SU, TU, WE, FR))),
-                              
+
     Expense(name = "breakfast",
             amount = 3.,
             on = DailyRecurring()),
-                              
+
     Expense(name = "rent+utils",
             amount = 800.,
             on = MonthlyRecurring(29)),
-                                 
+
     # Income
     Income(name = "job",
            amount = 2e3,
@@ -73,6 +73,6 @@ def summary(fromdt, todt):
   Histogram(*args)
 
 if __name__ == '__main__':
-  summary(Date(2012, 2, 1), Date(2012, 8, 15))
+  summary(datetime.date(2012, 2, 1), datetime.date(2012, 8, 15))
 
 

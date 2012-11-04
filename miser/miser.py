@@ -4,21 +4,34 @@ from __future__ import print_function
 
 import datetime
 import operator
-import collections
-from dateutil.rrule import *
-from .scheduling import _Recurring
+
+from .transactions import Income, Expense
+from .buckets import Savings, Debt
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class Miser(object):
-    """Holds `Transactions` and evaluates their net over a given period of time.
-    Can evaluate how close to budget we are.
+    """
+    Holds `Transaction`s and `Bucket`s and plays out the interaction between
+    the two, effectively creating a time-series of `Day`s.
     """
 
-    def __init__(self, name, initialBalance = 0):
-        self.initialBalance = initialBalance
+    def __init__(self, name):
         self.name = name
+
+        #: holds Transaction objects
         self.transactions = []
-        self.goals = []
+
+        #: holds Debt bucket objects
+        self.debts = []
+
+        #: holds Savings bucket objects
+        self.savings = []
+
+        #: maps dates to Day objects
+        self.days = {}
 
     def __getitem__(self, idx):
         """Get a MiserDay object.
@@ -29,14 +42,73 @@ class Miser(object):
         Returns:
             MiserDay
         """
-        exps = self.expenses(idx, idx)
-        inc = self.income(idx, idx)
+        return self.days[idx]
 
-        return MiserDay(expenses=exps, income=inc)
+    def totals(self, begin, end):
+        if (begin not in self.days) or (end not in self.days):
+            self.simulate(begin, end)
 
+        maxd = max(self.days.keys())
+        return self.days[maxd].jsonDict
 
-    def addGoal(self, g):
-        self.goals.append(g)
+    def simulate(self, fromd, tod):
+        """Run a simulation for this Miser collection over a certain period
+        of time. Takes datetime.dates."""
+        earliest = min(self.days.keys() or [None])
+
+        if not earliest or (fromd < earliest):
+            self._freshSimulation(fromd, tod)
+        else:
+            self._continueSimulation(fromd, tod)
+            self.days = {}
+
+    def _freshSimulation(self, fromd, tod):
+        """Run a Miser simulation, disregarding any previous simulation
+        data."""
+        log.debug("First day of simulation: %s." % fromd)
+
+        oned = datetime.timedelta(days=1)
+        buckets = self.debts + self.savings
+
+        self._initializeBuckets()
+        self.days[fromd] = Day.first(fromd, self.transactions, buckets)
+
+        self._continueSimulation(fromd + oned, tod)
+
+    def _initializeBuckets(self):
+        """Initialize the Savings/Debt buckets to a blank state."""
+        for d in self.debts:
+            d.init()
+
+        for s in self.savings:
+            s.init()
+
+    def _continueSimulation(self, fromd, tod):
+        """Extend a simulation, taking advantage of existing simulation
+        data."""
+        oned = datetime.timedelta(days=1)
+        maxd = max(self.days.keys())
+        lastd = maxd
+
+        while lastd < tod:
+            currd = lastd + oned
+
+            if currd not in self.days:
+                log.debug("Simulating new Day for %s." % currd)
+
+                newday = Day.next(self.days[lastd])
+                self.days[currd] = newday
+            else:
+                log.debug("Using existing day for %s." % currd)
+
+            lastd = currd
+            currd += oned
+
+    def addDebt(self, d):
+        self.debts.append(d)
+
+    def addSavings(self, s):
+        self.savings.append(s)
 
     def addTransactions(self, *trans):
         for t in trans:
@@ -45,167 +117,116 @@ class Miser(object):
     def addTransaction(self, trans):
         self.transactions.append(trans)
 
-    def _buildTotalsDict(self, fromdt, todt, trans_type=None):
-        """
-        Return a dictionary that is keyed by Transactions and valued by
-        the total amount of the Transaction.
+    def surplus(self, fromd, tod):
+        """Return the difference of income to expenses over a period of
+        time."""
+        return self.income(fromd, tod) + self.expenses(fromd, tod)
 
-        Args:
-            fromdt (datetime.date)
-            todt (datetime.date)
-            trans_type (Transaction): only consider this specific type of
-                transaction
-        """
-        trans = self.transactions
-
-        if trans_type:
-            trans = [t for t in trans if type(t) == trans_type]
-
-        return {t: t.effectForPeriod(fromdt, todt) for t in trans}
-
-    def totalSaved(self, fromdt, todt):
-        """Return a scalar total of the net amount over a period of time."""
-        return sum(self._buildTotalsDict(fromdt, todt).values()) \
-                + self.initialBalance
-
-    def goalStatus(self, fromdt, todt):
-        """Return a dict keyed by Goals and valued by the difference between the
-        total accumulated and the `Goal.amount`."""
-        tot = self.totalSaved(fromdt, todt)
-        return {g: (tot - g.amount) for g in self.goals}
-
-    def income(self, fromdt, todt):
+    def income(self, fromd, tod):
         """Return a dict keyed by income Transactions and valued by their total
         amount over a period of time."""
-        return self._buildTotalsDict(fromdt, todt, Income)
+        tot = self.totals(fromd, tod)
 
-    def expenses(self, fromdt, todt):
-        """Return a dict keyed by expense Transactions and valued by their total
-        amount over a period of time."""
-        return self._buildTotalsDict(fromdt, todt, Expense)
+        return sum(tot['income'].values())
+
+    def expenses(self, fromd, tod):
+        """Return a dict keyed by expense Transactions and valued by their
+        total amount over a period of time."""
+        tot = self.totals(fromd, tod)
+
+        return sum(tot['expenses'].values())
 
 
-class MiserDay(object):
+class Day(object):
     """
-    Representation of a day; contains two dicts,
+    Representation of the cumulative effects of a budget up until Day.date.
 
-      - expenses
-      - income
-
-    both are keyed by Transaction objects and valued by their net effect.
+    Emphasis on cumulative: a single date is not indicative of the change seen
+    by one single day, but the running accumulation of effects seen up to and
+    including that day since the first day considered.
     """
 
-    def __init__(self, expenses=None, income=None):
+    def __init__(self, date, expenses=None, incomes=None, buckets=None):
         """
         Args:
             expenses (dict)
             income (dict)
+            date (date)
+            buckets ([Bucket, ...])
         """
+        self.date = date
+
+        #: Keyed by Transactions, valued by net cumulative effect
         self.expenses = expenses or {}
-        self.income = income or {}
+        self.incomes = incomes or {}
+
+        self.buckets = buckets or []
+
+        #: Keyed by Buckets, valued by Bucket.snapshots
+        self.savings = {}
+        self.debts = {}
+
+    @staticmethod
+    def first(date, transactions, buckets):
+        """Given a date and some transactions objects, return the effects of
+        the transactions and the associated bucket objects."""
+        newday = Day(date, buckets=buckets)
+
+        for t in transactions:
+            transdict = None
+
+            if isinstance(t, Income):
+                transdict = newday.incomes
+            elif isinstance(t, Expense):
+                transdict = newday.expenses
+
+            transdict[t] = t.simulate(date)
+
+        newday._buildBucketSnapshots(date)
+
+        return newday
+
+    @staticmethod
+    def next(prev):
+        """Return a constructed/simulated Day object for the day after
+        `prev` Day."""
+        newd = prev.date + datetime.timedelta(days=1)
+        newday = Day(newd, prev.expenses, prev.incomes, prev.buckets)
+
+        for transdict in (newday.expenses, newday.incomes):
+            for t in transdict:
+                if transdict.get(t):
+                    transdict[t] += t.simulate(newday.date)
+                else:
+                    transdict[t] = t.simulate(newday.date)
+
+        newday._buildBucketSnapshots(newd)
+
+        return newday
+
+    def _buildBucketSnapshots(self, date):
+        """Simulate Bucket activity for a day and return the snapshots. To be
+        run *after* all transactions have been run."""
+        bucketdict = None
+
+        for b in self.buckets:
+            b.simulate(self.date)
+
+            if isinstance(b, Savings):
+                bucketdict = self.savings
+            elif isinstance(b, Debt):
+                bucketdict = self.debts
+
+            bucketdict[b] = b.snapshot(date)['amount']
 
     @property
-    def total_expenses(self):
-        return sum(self.expenses.values())
-
-    @property
-    def total_income(self):
-        return sum(self.income.values())
-
-    @property
-    def total(self):
-        return self.total_income + self.total_expenses
-
-
-class Transaction(object):
-    """A `rule` for recurrence, an `amount` for how much money is involved, and
-    a `name` for identification. `Miser` has these."""
-
-    def __init__(self, name, amount, on, category=None):
-        """
-        :Parameters:
-            - `name`
-            - `amount`: Can be a scalar amount, the result of a generator, or a
-            callable.
-            - `on`: a `Datetime` or a `dateutil.rrule`
-        """
-        self.name = name
-        self.category = category
-        self.dateRules = rruleset()
-        self._amount = amount
-
-        on = on if isinstance(on, collections.Iterable) else [on]
-
-        # merge the incoming dateRules
-        for dateOrRule in on:
-            recurrenceIs = lambda x: isinstance(dateOrRule, x)
-
-        if recurrenceIs(_Recurring):
-            self.dateRules.rrule(dateOrRule.rule)
-        elif recurrenceIs(rrule):  # accept `dateutil.rrule`s
-            self.dateRules.rrule(dateOrRule)
-        elif recurrenceIs(datetime.datetime):
-            self.dateRules.rdate(dateOrRule)
-        else:
-            import sys
-            print("Couldn't add date rules for transaction '%s'!",
-                  file=sys.stderr)
-
-    def __repr__(self):
-        return "%s: %s" % (self.__class__.__name__, self.name)
-
-    @property
-    def amount(self):
-        if isinstance(self._amount, collections.Iterator):
-            return self._amount.next()
-        elif callable(self._amount):
-            return self._amount()
-        else:
-            return self._amount
-
-    def effectForPeriod(self, fromdt, todt):
-        """Calculate the effect of a transaction over a period of
-        time specified by `fromdt` to `todt`."""
-
-        fromdt = to_datetime(fromdt)
-        todt = to_datetime(todt)
-
-        hits = self.dateRules.between(fromdt, todt, inc=True)
-
-        # we must iterate in case self.amount is a generator
-        amt = 0
-        for i in range(len(hits)):
-            amt += self.amount
-
-        return amt
-
-    def effectForDate(self, date):
-        """Get the effect for a given datetime.date."""
-        return effectForPeriod(date, date)
-
-
-class Expense(Transaction):
-
-    @property
-    def amount(self):
-        return -1. * super(Expense, self).amount
-
-
-class Income(Transaction):
-    pass
-
-
-class Goal(object):
-
-    def __init__(self, name, amount, by):
-        self.name = name
-        self.amount = amount
-        self.by = by
-
-"""
-Utility functions
------------------
-"""
+    def jsonDict(self):
+        return {
+            'expenses': self.expenses,
+            'income': self.incomes,
+            'savings': self.savings,
+            'debt': self.debts,
+        }
 
 
 def dictToSortedList(inDict):
@@ -221,6 +242,3 @@ def to_datetime(date_thing):
 
     return date_thing
 
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
