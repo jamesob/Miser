@@ -37,18 +37,20 @@ class MiserTest(unittest.TestCase):
 
     def _setUp_miser(self):
         """Establish some Miser state to test on."""
-        self.cc_debt = Debt("cc",
-                            begin=self.tomorrow_date,
-                            rate=0.13,
-                            amount=100.,
-                            compounded=CompoundingPeriods.MONTHLY)
+        self.cc_debt = Debt(
+            "cc",
+            begin=self.tomorrow_date,
+            rate=0.13,
+            amount=100.,
+            compounded=CompoundingPeriods.MONTHLY)
 
         self.m.addDebt(self.cc_debt)
 
-        self.savings = Savings("stocks",
-                               rate=0.07,
-                               amount=0.,
-                               compounded=CompoundingPeriods.CONTINUOUSLY)
+        self.savings = Savings(
+            "stocks",
+            rate=0.07,
+            amount=0.,
+            compounded=CompoundingPeriods.YEARLY)
 
         self.m.addSavings(self.savings)
 
@@ -96,14 +98,12 @@ class MiserTest(unittest.TestCase):
                          sum(totals_dict['income'].values()))
 
         self.assertGreater(
-            100.,
             sum(totals_dict['savings'].values()),
-            "Savings should have grown to beyond 100.")
+            100.)
 
         self.assertGreaterEqual(
-            80.,
             sum(totals_dict['debt'].values()),
-            "Debt should be somewhere above $80.")
+            80.)
 
     def test_resimulation(self):
         """Ensure that asking for simulations of the same date range don't

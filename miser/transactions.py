@@ -86,7 +86,8 @@ class Transaction(object):
         amt = self._effectForDate(date)
 
         if amt and self.towards:
-            self.towards.inc(amt)
+            # reverse amount: expense -> adding to bucket
+            self.towards.inc(-1. * amt)
 
         return amt
 

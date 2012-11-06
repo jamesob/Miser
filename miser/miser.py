@@ -60,7 +60,6 @@ class Miser(object):
             self._freshSimulation(fromd, tod)
         else:
             self._continueSimulation(fromd, tod)
-            self.days = {}
 
     def _freshSimulation(self, fromd, tod):
         """Run a Miser simulation, disregarding any previous simulation
@@ -73,7 +72,7 @@ class Miser(object):
         self._initializeBuckets()
         self.days[fromd] = Day.first(fromd, self.transactions, buckets)
 
-        self._continueSimulation(fromd + oned, tod)
+        self._continueSimulation(fromd + oned, tod, skip_exists=False)
 
     def _initializeBuckets(self):
         """Initialize the Savings/Debt buckets to a blank state."""
@@ -83,7 +82,7 @@ class Miser(object):
         for s in self.savings:
             s.init()
 
-    def _continueSimulation(self, fromd, tod):
+    def _continueSimulation(self, fromd, tod, skip_exists=True):
         """Extend a simulation, taking advantage of existing simulation
         data."""
         oned = datetime.timedelta(days=1)
@@ -93,7 +92,7 @@ class Miser(object):
         while lastd < tod:
             currd = lastd + oned
 
-            if currd not in self.days:
+            if not skip_exists and (currd not in self.days):
                 log.debug("Simulating new Day for %s." % currd)
 
                 newday = Day.next(self.days[lastd])
@@ -135,6 +134,11 @@ class Miser(object):
         tot = self.totals(fromd, tod)
 
         return sum(tot['expenses'].values())
+
+    @property
+    def latestJson(self):
+        maxd = max(self.days.keys())
+        return self.days[maxd].jsonDict
 
 
 class Day(object):

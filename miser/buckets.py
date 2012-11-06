@@ -3,13 +3,85 @@ Buckets represent stateful collections of $$$, like savings or debts.
 """
 
 import abc
+import math
+
+import logging
+log = logging.getLogger(__name__)
+
+
+__all__ = ['Savings', 'Debt', 'CompoundingPeriods']
+
+
+class CompoundingStrategy(object):
+    """Represents a strategy for compounding interest based on a certain
+    periodicity."""
+
+    __meta__ = abc.ABCMeta
+
+    def __init__(self, rate):
+        self.rate = rate
+
+    @abc.abstractmethod
+    def interestForDay(self, amount):
+        pass
+
+    @staticmethod
+    def strategy(const):
+        """Return a CompoundingStrategy given a constant."""
+        strategies = CompoundingStrategy.__subclasses__()
+
+        for strategy in strategies:
+            if strategy.const == const:
+                return strategy
+
+        log.warning("No strategy found for const '%s'." % const)
+
+        return strategy
+
+
+class Monthly(CompoundingStrategy):
+
+    const = 'monthly'
+
+    def interestForDay(self, amount):
+        """This is kind of a hack; only provides approximate interest values
+        since we're using an average days-per-month count."""
+        daily_rate = ((1 + self.rate) ** (1. / 30)) - 1
+
+        return (amount * daily_rate)
+
+
+class Yearly(CompoundingStrategy):
+
+    const = 'yearly'
+
+    def interestForDay(self, amount):
+        yearly = ((1 + self.rate) ** (1. / 365)) - 1
+        return (amount * yearly)
+
+
+class Daily(CompoundingStrategy):
+
+    const = 'daily'
+
+    def interestForDay(self, amount):
+        return (amount * self.rate)
+
+
+class Continuously(CompoundingStrategy):
+
+    const = 'continuously'
+
+    def interestForDay(self, amount):
+        return (amount * (math.e ** (self.rate * (1 / 365.)))) - amount
 
 
 class CompoundingPeriods(object):
     """A list of constants indicating how often interest can be compounded."""
-    MONTHLY = 'monthly'
-    YEARLY = 'yearly'
-    CONTINUOUSLY = 'continuously'
+    MONTHLY = Monthly.const
+    YEARLY = Yearly.const
+    CONTINUOUSLY = Continuously.const
+    DAILY = Daily.const
 
 
 class Bucket(object):
@@ -43,6 +115,8 @@ class Bucket(object):
         self._interestAccrued = 0.0
         self._dateLastSeen = None
 
+        self._compounding = CompoundingStrategy.strategy(compounded)(rate)
+
     def init(self):
         """Reinitialize this Bucket to be as it was on __init__."""
         self.amount = self._principal
@@ -52,11 +126,20 @@ class Bucket(object):
         """Simulate a day passing. This mostly facilitates compounding of
         interest, etc."""
         if not self.isEffective(date):
+            log.debug("Bucket %s isn't effective yet; skipping simulation.")
             return
+
+        interest = self._compounding.interestForDay(self.amount)
+
+        self._interestAccrued += interest
+        self.amount += interest
+
+        log.debug("Added interest (%s) to bucket %s."
+                  % (interest, self))
 
     def isEffective(self, date):
         """Return whether or not to consider this bucket yet."""
-        return self.begin and (self.begin > date)
+        return (not self.begin) or (self.begin <= date)
 
     def inc(self, amount):
         """
@@ -72,6 +155,18 @@ class Bucket(object):
             'amount': self.amount if self.isEffective(date) else 0.,
         }
 
+    def __repr__(self):
+        return ("%s(%s, %s, rate=%s, compounded=%s, begin=%s)"
+                % (self.__class__.__name__,
+                   self.name,
+                   self.amount,
+                   self.rate,
+                   self.compounded,
+                   self.begin))
+
+    __str__ = __repr__
+    __unicode__ = __repr__
+
 
 class Savings(Bucket):
 
@@ -84,5 +179,4 @@ class Debt(Bucket):
         super(Debt, self).__init__(*args, **kwargs)
 
         self.amount *= -1.
-
 
