@@ -10,6 +10,9 @@ from .utils import to_dt
 from dateutil.rrule import rrule, rruleset
 from .scheduling import _Recurring
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class Transaction(object):
     """A `rule` for recurrence, an `amount` for how much money is involved, and
@@ -34,25 +37,26 @@ class Transaction(object):
         self.name = name
         self.tags = tags
         self.towards = towards
-        self.dateRules = rruleset()
+        self.dateRules = rruleset(cache=True)
         self._amount = amount
 
-        on = on if isinstance(on, collections.Iterable) else [on]
+        on_list = on if isinstance(on, collections.Iterable) else [on]
 
-        # merge the incoming dateRules
-        for dateOrRule in on:
-            recurrenceIs = lambda x: isinstance(dateOrRule, x)
+        for periodicity in on_list:
+            is_p_instance = lambda x: isinstance(periodicity, x)
 
-        if recurrenceIs(_Recurring):
-            self.dateRules.rrule(dateOrRule.rule)
-        elif recurrenceIs(rrule):  # accept `dateutil.rrule`s
-            self.dateRules.rrule(dateOrRule)
-        elif recurrenceIs(datetime.datetime):
-            self.dateRules.rdate(dateOrRule)
-        else:
-            import sys
-            print("Couldn't add date rules for transaction '%s'!",
-                  file=sys.stderr)
+            if is_p_instance(_Recurring):
+                self.dateRules.rrule(periodicity.rule)
+
+            elif is_p_instance(rrule):
+                self.dateRules.rrule(periodicity)
+
+            elif is_p_instance(datetime.datetime):
+                self._effectiveDates.append(on)
+
+            else:
+                log.warning("Couldn't add date rules for periodicity '%s'!"
+                            % periodicity)
 
     def __repr__(self):
         return "%s: %s" % (self.__class__.__name__, self.name)

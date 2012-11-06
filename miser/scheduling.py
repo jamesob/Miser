@@ -32,6 +32,7 @@ class _Recurring(object):
             * `kwargs`: are valid arguments for `dateutil.rrule`s.
         """
         kwargs['dtstart'] = kwargs['dtstart'] or self.way_old_date
+        kwargs['cache'] = True
         self.rule = rrule.rrule(frequency, **kwargs)
 
 
