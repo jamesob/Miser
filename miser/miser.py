@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 import datetime
-import operator
 
 from .transactions import Income, Expense
 from .buckets import Savings, Debt
@@ -44,12 +43,17 @@ class Miser(object):
         """
         return self.days[idx]
 
-    def totals(self, begin, end):
-        if (begin not in self.days) or (end not in self.days):
-            self.simulate(begin, end)
+    def totals(self, begin=None, end=None):
+        """Return totals for a period. If no period specified, return totals
+        based on the latest day simulated."""
+        if (begin and end):
+            if (begin not in self.days) or (end not in self.days):
+                self.simulate(begin, end)
 
-        maxd = max(self.days.keys())
-        return self.days[maxd].jsonDict
+            maxd = max(self.days.keys())
+            return self.days[maxd].jsonDict
+        else:
+            return {k: sum(v.values()) for k, v in self.latestJson.items()}
 
     def simulate(self, fromd, tod):
         """Run a simulation for this Miser collection over a certain period
@@ -227,22 +231,11 @@ class Day(object):
     def jsonDict(self):
         return {
             'expenses': self.expenses,
+            'livingExpenses': {k: v for k, v in self.expenses.items()
+                               if not isinstance(k.towards, Savings)},
             'income': self.incomes,
             'savings': self.savings,
             'debt': self.debts,
         }
 
-
-def dictToSortedList(inDict):
-    return sorted(inDict.iteritems(), key=operator.itemgetter(1))
-
-
-def to_datetime(date_thing):
-    """Convert to datetime, if possible."""
-    dt = datetime
-
-    if type(date_thing) == dt.date:
-        date_thing = dt.datetime.combine(date_thing, dt.time())
-
-    return date_thing
 
