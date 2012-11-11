@@ -44,15 +44,11 @@ class MiserTest(unittest.TestCase):
             amount=100.,
             compounded=CompoundingPeriods.MONTHLY)
 
-        self.m.addDebt(self.cc_debt)
-
         self.savings = Savings(
             "stocks",
             rate=0.07,
             amount=0.,
             compounded=CompoundingPeriods.YEARLY)
-
-        self.m.addSavings(self.savings)
 
         self.m.addTransactions(
             Expense("wing chun",
@@ -85,7 +81,8 @@ class MiserTest(unittest.TestCase):
         expected_total_expenses = (100. + (20. * 2 * 4) + 20. + 100.) * -1.
         expected_total_income = 500. * 2
 
-        totals_dict = self.m.totals(self.sim_begin, self.sim_end)
+        sim = self.m.simulate(self.sim_begin, self.sim_end)
+        totals_dict = sim.totals
 
         self.assertTrue('expenses' in totals_dict)
         self.assertTrue('income' in totals_dict)
@@ -93,16 +90,16 @@ class MiserTest(unittest.TestCase):
         self.assertTrue('debt' in totals_dict)
 
         self.assertEqual(expected_total_expenses,
-                         sum(totals_dict['expenses'].values()))
+                         totals_dict['expenses'])
         self.assertEqual(expected_total_income,
-                         sum(totals_dict['income'].values()))
+                         totals_dict['income'])
 
         self.assertGreater(
-            sum(totals_dict['savings'].values()),
+            totals_dict['savings'],
             100.)
 
         self.assertGreaterEqual(
-            sum(totals_dict['debt'].values()),
+            totals_dict['debt'],
             80.)
 
     def test_resimulation(self):

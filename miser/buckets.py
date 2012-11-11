@@ -112,7 +112,7 @@ class Bucket(object):
         self.begin = begin
 
         self._principal = self.amount
-        self._interestAccrued = 0.0
+        self.interestAccrued = 0.0
         self._dateLastSeen = None
 
         self._compounding = CompoundingStrategy.strategy(compounded)(rate)
@@ -120,7 +120,7 @@ class Bucket(object):
     def init(self):
         """Reinitialize this Bucket to be as it was on __init__."""
         self.amount = self._principal
-        self._interestAccrued = 0.0
+        self.interestAccrued = 0.0
 
     def simulate(self, date):
         """Simulate a day passing. This mostly facilitates compounding of
@@ -131,7 +131,7 @@ class Bucket(object):
 
         interest = self._compounding.interestForDay(self.amount)
 
-        self._interestAccrued += interest
+        self.interestAccrued += interest
         self.amount += interest
 
         log.debug("Added interest (%s) to bucket %s."

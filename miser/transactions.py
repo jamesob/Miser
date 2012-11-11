@@ -6,9 +6,10 @@ from __future__ import print_function
 
 import datetime
 import collections
-from .utils import to_dt
 from dateutil.rrule import rrule, rruleset
+from .utils import to_dt
 from .scheduling import _Recurring
+from .buckets import Savings, Debt
 
 import logging
 log = logging.getLogger(__name__)
@@ -61,6 +62,18 @@ class Transaction(object):
     def __repr__(self):
         return "%s: %s" % (self.__class__.__name__, self.name)
 
+    @staticmethod
+    def all_buckets(transactions):
+        """From a list of Transactions, return a list of all buckets associated
+        with the transactions."""
+        bs = []
+
+        for t in transactions:
+            if t.towards and t.towards not in bs:
+                bs.append(t.towards)
+
+        return bs
+
     @property
     def amount(self):
         amt = None
@@ -100,6 +113,16 @@ class Expense(Transaction):
     """Outflow of money."""
 
     amountMultiplier = -1.
+
+    @property
+    def isTowardsSavings(self):
+        """Return if this Expense goes towards savings."""
+        return isinstance(self.towards, Savings)
+
+    @property
+    def isTowardsDebt(self):
+        """Return if this Expense goes towards debt."""
+        return isinstance(self.towards, Debt)
 
 
 class Income(Transaction):

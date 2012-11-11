@@ -26,17 +26,21 @@ class MiserTests(unittest.TestCase):
                                       end=self.tod))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m.surplus(self.fromd, self.tod), -365.)
+        sim = self.m.simulate(self.fromd, self.tod)
+
+        self.assertEqual(sim.surplus, -365.)
 
     def test_weekly(self):
-        t = Expense("romantic dinner with '90s winona ryder",
+        t = Expense("dindin",
                     amount=100.,
                     on=WeeklyRecurring(Weekdays.FR,
                                        begin=self.fromd,
                                        end=self.tod))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m.surplus(self.fromd, self.tod), 100. * -52.)
+        sim = self.m.simulate(self.fromd, self.tod)
+
+        self.assertEqual(sim.surplus, 100. * -52.)
 
     def test_monthly(self):
         t = Expense("rent",
@@ -46,7 +50,9 @@ class MiserTests(unittest.TestCase):
                                         end=self.tod))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m.surplus(self.fromd, self.tod), 12 * -1000.)
+        sim = self.m.simulate(self.fromd, self.tod)
+
+        self.assertEqual(sim.surplus, 12 * -1000.)
 
     def test_overlap(self):
         """Two overlapping recurrence rules shouldn't step on each others'
@@ -60,7 +66,9 @@ class MiserTests(unittest.TestCase):
                                        end=self.tod)))
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m.surplus(self.fromd, self.tod), -365.)
+        sim = self.m.simulate(self.fromd, self.tod)
+
+        self.assertEqual(sim.surplus, -365.)
 
     def test_generator_amt(self):
         def somuch():
@@ -77,7 +85,9 @@ class MiserTests(unittest.TestCase):
                    on=DailyRecurring())
 
         self.m.addTransaction(t)
-        self.assertEqual(self.m.surplus(fromd, tod), sum([1, 2, 3]))
+        sim = self.m.simulate(fromd, tod)
+
+        self.assertEqual(sim.surplus, sum([1, 2, 3]))
 
     def test_callable_amt(self):
         def monay():
@@ -91,5 +101,7 @@ class MiserTests(unittest.TestCase):
                    on=DailyRecurring())
 
         self.m.addTransaction(t)
-        self.assertTrue(self.m.surplus(fromd, tod) <= 10 * 3)
+        sim = self.m.simulate(fromd, tod)
+
+        self.assertTrue(sim.surplus <= 10 * 3)
 

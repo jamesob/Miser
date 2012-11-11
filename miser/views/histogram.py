@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from ..miser import dictToSortedList
+from ..utils import dictToSortedList
 
 
 class Histogram(object):

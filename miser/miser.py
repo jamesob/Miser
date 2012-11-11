@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import datetime
 
-from .transactions import Income, Expense
+from .transactions import Transaction, Income, Expense
 from .buckets import Savings, Debt
 
 import logging
@@ -13,8 +13,9 @@ log = logging.getLogger(__name__)
 
 class Miser(object):
     """
-    Holds `Transaction`s and `Bucket`s and plays out the interaction between
-    the two, effectively creating a time-series of `Day`s.
+    Entrypoint for adding `Transaction`s and playing out their effect over a
+    period of time. Delivers a time-series of `Day`s as returned in a
+    `Simulation` object.
     """
 
     def __init__(self, name):
@@ -23,95 +24,26 @@ class Miser(object):
         #: holds Transaction objects
         self.transactions = []
 
-        #: holds Debt bucket objects
-        self.debts = []
-
-        #: holds Savings bucket objects
-        self.savings = []
-
-        #: maps dates to Day objects
-        self.days = {}
-
-    def __getitem__(self, idx):
-        """Get a MiserDay object.
-
-        Args:
-            idx (datetime.date): the day to retrieve
-
-        Returns:
-            MiserDay
+    def simulate(self, fromd, tod, exclude_trans=None):
         """
-        return self.days[idx]
+        Run a Miser simulation, disregarding any previous simulation
+        data.
 
-    def totals(self, begin=None, end=None):
-        """Return totals for a period. If no period specified, return totals
-        based on the latest day simulated."""
-        if (begin and end):
-            if (begin not in self.days) or (end not in self.days):
-                self.simulate(begin, end)
-
-            maxd = max(self.days.keys())
-            return self.days[maxd].jsonDict
-        else:
-            return {k: sum(v.values()) for k, v in self.latestJson.items()}
-
-    def simulate(self, fromd, tod):
-        """Run a simulation for this Miser collection over a certain period
-        of time. Takes datetime.dates."""
-        earliest = min(self.days.keys() or [None])
-
-        if not earliest or (fromd < earliest):
-            self._freshSimulation(fromd, tod)
-        else:
-            self._continueSimulation(fromd, tod)
-
-    def _freshSimulation(self, fromd, tod):
-        """Run a Miser simulation, disregarding any previous simulation
-        data."""
+        Kwargs:
+            exclude_trans ([Transaction, ...]): exclude a list of transactions
+                from this simulation
+        """
         log.debug("First day of simulation: %s." % fromd)
+        trans = self.transactions
 
-        oned = datetime.timedelta(days=1)
-        buckets = self.debts + self.savings
+        if exclude_trans:
+            trans = self._transWithExclusion(exclude_trans)
 
-        self._initializeBuckets()
-        self.days[fromd] = Day.first(fromd, self.transactions, buckets)
+        return Simulation.fromFirstDay(Day.first(fromd, trans), tod)
 
-        self._continueSimulation(fromd + oned, tod, skip_exists=False)
-
-    def _initializeBuckets(self):
-        """Initialize the Savings/Debt buckets to a blank state."""
-        for d in self.debts:
-            d.init()
-
-        for s in self.savings:
-            s.init()
-
-    def _continueSimulation(self, fromd, tod, skip_exists=True):
-        """Extend a simulation, taking advantage of existing simulation
-        data."""
-        oned = datetime.timedelta(days=1)
-        maxd = max(self.days.keys())
-        lastd = maxd
-
-        while lastd < tod:
-            currd = lastd + oned
-
-            if not skip_exists and (currd not in self.days):
-                log.debug("Simulating new Day for %s." % currd)
-
-                newday = Day.next(self.days[lastd])
-                self.days[currd] = newday
-            else:
-                log.debug("Using existing day for %s." % currd)
-
-            lastd = currd
-            currd += oned
-
-    def addDebt(self, d):
-        self.debts.append(d)
-
-    def addSavings(self, s):
-        self.savings.append(s)
+    def _transWithExclusion(self, to_exclude):
+        """Return a list of self.transactions with `to_exclude` excluded."""
+        return [t for t in self.transactions if t not in to_exclude]
 
     def addTransactions(self, *trans):
         for t in trans:
@@ -120,29 +52,160 @@ class Miser(object):
     def addTransaction(self, trans):
         self.transactions.append(trans)
 
-    def surplus(self, fromd, tod):
+
+class Simulation(object):
+    """Represents a budget simulation; holds a series of `Day`s and provides
+    various statistics."""
+
+    def __init__(self, days):
+        #: holds Debt bucket objects
+        self.debts = days[0].debts.keys() if days else []
+
+        #: holds Savings bucket objects
+        self.savings = days[0].savings.keys() if days else []
+
+        #: maps dates to Day objects
+        self.days = {d.date: d for d in days}
+
+    def __getitem__(self, idx):
+        """
+        Get a Day object.
+
+        Args:
+            idx (datetime.date): the day to retrieve
+        """
+        return self.days[idx]
+
+    @staticmethod
+    def fromFirstDay(day, tod):
+        """From a first Day, return a Simulation fully extended to date
+        `tod`. Assumes the same transactions, same buckets, etc."""
+        sim = Simulation([day])
+        sim.extend(tod)
+
+        return sim
+
+    def extend(self, tod):
+        """
+        Extend a simulation, taking advantage of existing simulation
+        data.
+
+        Args:
+            tod (date): date to extend the simulation to (inclusive)
+        """
+        oned = datetime.timedelta(days=1)
+        maxd = max(self.days.keys())
+        lastd = maxd
+
+        while lastd < tod:
+            currd = lastd + oned
+
+            if currd not in self.days:
+                log.debug("Simulating new Day for %s." % currd)
+
+                newday = Day.next(self.days[lastd])
+                self.days[currd] = newday
+
+            lastd = currd
+            currd += oned
+
+    @property
+    def earliest_dt(self):
+        """Return the earliest datetime we have a day for in this
+        simulation."""
+        return min(self.days.keys())
+
+    @property
+    def latest_dt(self):
+        """Return the latest datetime we have a day for in this simulation."""
+        return max(self.days.keys())
+
+    @property
+    def numDays(self):
+        """Return the number of days covered by this simulation."""
+        return (self.latest_dt - self.earliest_dt).days
+
+    @property
+    def surplus(self):
         """Return the difference of income to expenses over a period of
         time."""
-        return self.income(fromd, tod) + self.expenses(fromd, tod)
+        return self.income + self.expenses
 
-    def income(self, fromd, tod):
+    @property
+    def income(self):
         """Return a dict keyed by income Transactions and valued by their total
         amount over a period of time."""
-        tot = self.totals(fromd, tod)
+        tot = self.totals
+        return tot['income']
 
-        return sum(tot['income'].values())
-
-    def expenses(self, fromd, tod):
+    @property
+    def expenses(self):
         """Return a dict keyed by expense Transactions and valued by their
         total amount over a period of time."""
-        tot = self.totals(fromd, tod)
+        tot = self.totals
+        return tot['expenses']
 
-        return sum(tot['expenses'].values())
+    @property
+    def totals(self):
+        """Return totals for a period. If no period specified, return totals
+        based on the latest day simulated."""
+        return {k: sum(v.values()) for k, v in self.latestJson.items()}
+
+    @property
+    def latestDay(self):
+        """Return the latest Day in this simulation."""
+        return self.days[max(self.days.keys())]
 
     @property
     def latestJson(self):
-        maxd = max(self.days.keys())
-        return self.days[maxd].jsonDict
+        """Return the JSON for the latest Day in this simulation."""
+        return self.latestDay.jsonDict
+
+    @property
+    def scalarJson(self):
+        """
+        Return a dict containing composite totals of various kinds.
+
+        Returns:
+            {
+              'outflow': total of expenses not towards Saving buckets,
+              'interest': total of interest accumulated on Saving buckets,
+              'inflow': total income plus total Saving buckets interest,
+              'towardsSavings': total of expenses towards Saving buckets,
+              'towardsDebt': total of expenses towards Debt buckets,
+              'income': total income,
+              'livingExpenses': total of expenses not towards any buckets,
+
+              'numDays': number of days this simulation covers,
+              'numYears': number of years this simulation covers,
+            }
+        """
+        day = self.latestDay
+
+        outflow = sum([v for k, v in day.expenses.items()
+                       if not k.isTowardsSavings])
+        livingExpenses = sum([v for k, v in day.expenses.items()
+                              if not k.towards])
+
+        income = sum(day.incomes.values())
+        interest = sum([b.interestAccrued
+                        for b in day.savings.keys()])
+        inflow = income + interest
+
+        towardsSavings = sum([v for k, v in day.expenses.items()
+                              if k.isTowardsSavings])
+        towardsDebt = sum([v for k, v in day.expenses.items()
+                           if k.isTowardsDebt])
+
+        return {
+            'outflow': outflow,
+            'inflow': inflow,
+            'towardsSavings': towardsSavings,
+            'towardsDebt': towardsDebt,
+            'income': income,
+            'interest': interest,
+            'livingExpenses': livingExpenses,
+        }
 
 
 class Day(object):
@@ -175,20 +238,21 @@ class Day(object):
         self.debts = {}
 
     @staticmethod
-    def first(date, transactions, buckets):
+    def first(date, transactions):
         """Given a date and some transactions objects, return the effects of
         the transactions and the associated bucket objects."""
+        buckets = Transaction.all_buckets(transactions)
+
+        for b in buckets:
+            b.init()
+
         newday = Day(date, buckets=buckets)
 
         for t in transactions:
-            transdict = None
-
             if isinstance(t, Income):
-                transdict = newday.incomes
+                newday.incomes[t] = t.simulate(date)
             elif isinstance(t, Expense):
-                transdict = newday.expenses
-
-            transdict[t] = t.simulate(date)
+                newday.expenses[t] = t.simulate(date)
 
         newday._buildBucketSnapshots(date)
 
@@ -215,24 +279,18 @@ class Day(object):
     def _buildBucketSnapshots(self, date):
         """Simulate Bucket activity for a day and return the snapshots. To be
         run *after* all transactions have been run."""
-        bucketdict = None
-
         for b in self.buckets:
             b.simulate(self.date)
 
             if isinstance(b, Savings):
-                bucketdict = self.savings
+                self.savings[b] = b.snapshot(date)['amount']
             elif isinstance(b, Debt):
-                bucketdict = self.debts
-
-            bucketdict[b] = b.snapshot(date)['amount']
+                self.debts[b] = b.snapshot(date)['amount']
 
     @property
     def jsonDict(self):
         return {
             'expenses': self.expenses,
-            'livingExpenses': {k: v for k, v in self.expenses.items()
-                               if not isinstance(k.towards, Savings)},
             'income': self.incomes,
             'savings': self.savings,
             'debt': self.debts,
