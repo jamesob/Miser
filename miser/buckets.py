@@ -126,7 +126,10 @@ class Bucket(object):
         """Simulate a day passing. This mostly facilitates compounding of
         interest, etc."""
         if not self.isEffective(date):
-            log.debug("Bucket %s isn't effective yet; skipping simulation.")
+            log.debug(
+                "Bucket %s isn't effective yet; skipping simulation." %
+                self
+            )
             return
 
         interest = self._compounding.interestForDay(self.amount)
@@ -179,4 +182,3 @@ class Debt(Bucket):
         super(Debt, self).__init__(*args, **kwargs)
 
         self.amount *= -1.
-

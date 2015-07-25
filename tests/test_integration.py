@@ -5,16 +5,20 @@ Test the top-level behavior of Miser.
 import unittest
 import datetime
 
-from miser import (Miser,
-                   Debt,
-                   Savings,
-                   Expense,
-                   Income,
-                   CompoundingPeriods)
+from miser import (
+    Miser,
+    Debt,
+    Savings,
+    Expense,
+    Income,
+    CompoundingPeriods,
+)
 
-from miser.scheduling import (MonthlyRecurring,
-                              WeeklyRecurring,
-                              Weekdays)
+from miser.scheduling import (
+    MonthlyRecurring,
+    WeeklyRecurring,
+    Weekdays,
+)
 
 
 class MiserTest(unittest.TestCase):
@@ -39,7 +43,6 @@ class MiserTest(unittest.TestCase):
         """Establish some Miser state to test on."""
         self.cc_debt = Debt(
             "cc",
-            begin=self.tomorrow_date,
             rate=0.13,
             amount=100.,
             compounded=CompoundingPeriods.MONTHLY)
@@ -94,6 +97,7 @@ class MiserTest(unittest.TestCase):
         self.assertEqual(expected_total_income,
                          totals_dict['income'])
 
+        print totals_dict
         self.assertGreater(
             totals_dict['savings'],
             100.)
@@ -109,4 +113,3 @@ class MiserTest(unittest.TestCase):
         self.m.simulate(self.sim_begin, self.sim_end)
 
         self.test_totals()
-
